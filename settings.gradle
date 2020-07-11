@@ -1,0 +1,3 @@
+include ':webRtcSignaling'
+include ':app'
+rootProject.name = "WebRtcSignaling"
