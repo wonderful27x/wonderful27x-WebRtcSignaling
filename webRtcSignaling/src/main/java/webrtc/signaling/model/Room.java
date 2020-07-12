@@ -13,7 +13,7 @@ public class Room {
     private String roomId;            //房间id
     private String createTime;        //创建时间
     private String createUserId;      //创建用户id
-    private List<String> membersId;   //房间里的成员id，不包括创建用户
+    private List<String> membersId;   //房间里的成员id，包括创建用户
 
     public Room(){
         membersId = new ArrayList<>();
@@ -61,5 +61,9 @@ public class Room {
 
     public void addMembersId(List<String> membersId){
         this.membersId.addAll(membersId);
+    }
+
+    public void remove(String userId){
+        membersId.remove(userId);
     }
 }

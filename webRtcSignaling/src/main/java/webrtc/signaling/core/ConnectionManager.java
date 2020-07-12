@@ -1,7 +1,6 @@
 package webrtc.signaling.core;
 
 import java.util.concurrent.ConcurrentHashMap;
-
 import webrtc.signaling.model.Connection;
 import webrtc.signaling.model.User;
 
@@ -43,5 +42,12 @@ public class ConnectionManager {
 
     public Connection getConnection(String userId){
         return get(userId).getConnection();
+    }
+
+    public void remove(String userId){
+        User remove = connections.remove(userId);
+        if (remove != null){
+            remove.setConnection(null);
+        }
     }
 }

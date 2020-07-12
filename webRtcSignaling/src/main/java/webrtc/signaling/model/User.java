@@ -7,9 +7,10 @@ import webrtc.signaling.type.DeviceType;
  */
 public class User {
 
-    private DeviceType deviceType;       //使用的终端类型
     private String userId;         //用户id
     private String userName;       //用户名
+    private String roomId;         //用户所在房间号
+    private DeviceType deviceType; //使用的终端类型
     private Connection connection; //webSocket连接对象
 
     public User(){}
@@ -33,6 +34,14 @@ public class User {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
     }
 
     public DeviceType getDeviceType() {

@@ -1,6 +1,7 @@
 package webrtc.signaling.core;
 
 import com.google.gson.Gson;
+import java.util.List;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -11,13 +12,15 @@ import javax.websocket.server.ServerEndpoint;
 import webrtc.signaling.model.BaseMessage;
 import webrtc.signaling.model.Connection;
 import webrtc.signaling.model.Event;
-import webrtc.signaling.model.JoinMessage;
+import webrtc.signaling.model.NegotiationMessage;
 import webrtc.signaling.model.Message;
 import webrtc.signaling.model.Room;
 import webrtc.signaling.model.User;
 import webrtc.signaling.type.DeviceType;
 import webrtc.signaling.type.MessageType;
+import webrtc.signaling.type.RoomType;
 import webrtc.signaling.utils.IdCreator;
+import webrtc.signaling.utils.LogUtil;
 
 /**
  * 服务端信令交换webSocket
@@ -55,7 +58,7 @@ public class SignalingWebSocketService {
      */
     @OnClose
     public void onClose(Session session){
-
+        handleMessage(MessageType.LEAVE,null);
     }
 
     /**
@@ -68,6 +71,7 @@ public class SignalingWebSocketService {
         Message messageObject = new Message(message);
         Event event = new Event();
         event.objA = messageObject;
+        event.objB = message;
         handleMessage(messageObject.getMessageType(),event);
     }
 
@@ -78,7 +82,7 @@ public class SignalingWebSocketService {
      */
     @OnError
     public void onError(Session session,Throwable error){
-
+        LogUtil.logPrint("error - session code " + session.hashCode() + " : " + error.getMessage());
     }
 
     //当有人建立了webSocket连接时，创建一个用户连接对象
@@ -117,17 +121,20 @@ public class SignalingWebSocketService {
             case CONNECT_OK:
                 connectOk(event);
                 break;
+            case LEAVE:
+                someoneLeave();
+                break;
             case JOIN:
                 someoneJoin(event);
                 break;
-            case LEAVE:
-                someoneLeave(event);
-                break;
             case OFFER:
+                sendOffer(event);
                 break;
             case ANSWER:
+                answerOffer(event);
                 break;
             case CANDIDATE:
+                sendCandidate(event);
                 break;
         }
     }
@@ -145,24 +152,32 @@ public class SignalingWebSocketService {
     private void someoneJoin(Event event){
         //从event中取出事件信息并转换成对象
         Message message = (Message) event.objA;
+
         //将Message中的message字段转换成对象，这是Message中的有效数据
         //请注意Event和Message是不同的两个概念，Event只做本端的数据传输，而Message才是C/S两端交换的信息
-        BaseMessage<JoinMessage, Object> joinMessage = message.transForm(new BaseMessage<JoinMessage, Object>() {});
-        //获取申请者id
-        String userId = joinMessage.getMessage().userId;
+        BaseMessage<NegotiationMessage, Object> joinMessage = message.transForm(new BaseMessage<NegotiationMessage, Object>() {});
+
+        String userId = joinMessage.getMessage().userId;      //获取申请者id
+        String roomId = joinMessage.getMessage().roomId;      //获取申请加入的房间号
+        RoomType roomType = joinMessage.getMessage().roomType;//获取申请加入的房间类型,只有在房间不存在创建的时候起作用
+
         //根据房间id从容器中取出房间信息
-        Room room = roomManager.get(joinMessage.getMessage().roomId);
+        Room room = roomManager.get(roomId);
+
         //如果房间不存在则创建一个房间
         if (room == null){
             room = new Room();
-            room.setRoomType(joinMessage.getMessage().roomType);              //房间类型
-            room.setRoomId(joinMessage.getMessage().roomId);                  //房间号
+            room.setRoomType(roomType);                                       //房间类型
+            room.setRoomId(roomId);                                           //房间号
             String createTime = String.valueOf(System.currentTimeMillis());   //创建时间
             room.setCreateTime(createTime);                                   //创建时间
-            room.setCreateUserId(userId);            //创建用户id
-
-            roomManager.put(joinMessage.getMessage().roomId,room);            //向容器添加一个房间
+            room.setCreateUserId(userId);                                     //创建用户id
+            roomManager.put(roomId,room);                                     //向容器添加一个房间
         }
+
+        //将用户添加到房间里,并保存用户所在房间号
+        room.addMemberId(userId);
+        connectionManager.get(userId).setRoomId(roomId);
 
         //给加入者发送房间信息，消息类型COME
         BaseMessage<Room,Object> baseMessage = new BaseMessage<Room, Object>() {};
@@ -175,13 +190,57 @@ public class SignalingWebSocketService {
         baseMessage.setMessageType(MessageType.JOIN);
         jsonData = baseMessage.toJson();
         for (String id:room.getMembers()){
+            if (id.equals(userId))continue;
             connectionManager.getConnection(id).sendMessage(jsonData);
         }
     }
 
-    //有人离开房间
-    private void someoneLeave(Event event){
+    //有人离开房间，通知房间里的所有人
+    private void someoneLeave(){
+        //组装信息，最关键的是消息类型和离开用户的id
+        BaseMessage<NegotiationMessage,Object> baseMessage = new BaseMessage<NegotiationMessage, Object>() {};
+        NegotiationMessage message = new NegotiationMessage();
+        message.userId = this.userId;
+        baseMessage.setMessageType(MessageType.LEAVE);
+        baseMessage.setMessage(message);
+        String jsonData = baseMessage.toJson();
 
+        //获取需要发送的用户id
+        String roomId = connectionManager.get(userId).getRoomId();
+        Room room = roomManager.get(roomId);
+        List<String> members = room.getMembers();
+        //移除离开者
+        members.remove(userId);
+        //发送消息
+        for (String id:members){
+            connectionManager.getConnection(id).sendMessage(jsonData);
+        }
+
+        //清理空间
+        connectionManager.remove(userId);
+    }
+
+    //向一方发送自己的媒体协商数据-主动
+    private void sendOffer(Event event){
+        messageForward(event);
+    }
+
+    //向一方响应自己的媒体协商数据-被动
+    private void answerOffer(Event event){
+        messageForward(event);
+    }
+
+    //向一方发送自己的网络协商数据
+    private void sendCandidate(Event event){
+        messageForward(event);
+    }
+
+    //转发消息
+    private void messageForward(Event event){
+        Message message = (Message) event.objA;
+        BaseMessage<NegotiationMessage,Object> baseMessage = message.transForm(new BaseMessage<NegotiationMessage, Object>() {});
+        String userId = baseMessage.getMessage().userId;
+        connectionManager.getConnection(userId).sendMessage((String) event.objB);
     }
 
     //连接成功后给客户端发送用户信息
