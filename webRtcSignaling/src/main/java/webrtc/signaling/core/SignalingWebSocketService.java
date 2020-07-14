@@ -186,9 +186,11 @@ public class SignalingWebSocketService {
         String jsonData = baseMessage.toJson();
         connectionManager.getConnection(userId).sendMessage(jsonData);
 
-        //给房间里的其他人发送房间信息，消息类型Join
-        baseMessage.setMessageType(MessageType.JOIN);
-        jsonData = baseMessage.toJson();
+        //给房间里的其他人发送加入者的信息，消息类型Join
+        BaseMessage<User,Object> userMessage = new BaseMessage<User, Object>() {};
+        userMessage.setMessageType(MessageType.JOIN);
+        userMessage.setMessage(connectionManager.get(userId));
+        jsonData = userMessage.toJson();
         for (String id:room.getMembers()){
             if (id.equals(userId))continue;
             connectionManager.getConnection(id).sendMessage(jsonData);
