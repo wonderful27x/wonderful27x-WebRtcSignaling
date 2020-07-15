@@ -3,7 +3,11 @@ package webrtc.signaling.model;
 import javax.websocket.Session;
 
 /**
- * 与WebSocket的连接对象
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 与WebSocket的连接对象，Session具有会话功能
+ * @license Apache License 2.0
  */
 public class Connection {
 

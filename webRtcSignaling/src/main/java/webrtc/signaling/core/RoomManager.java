@@ -4,7 +4,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import webrtc.signaling.model.Room;
 
 /**
- * 房间管理类
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 房间管理类
+ * @license Apache License 2.0
  */
 public class RoomManager {
 

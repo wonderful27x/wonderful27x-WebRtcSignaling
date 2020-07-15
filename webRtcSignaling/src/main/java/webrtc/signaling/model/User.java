@@ -3,7 +3,11 @@ package webrtc.signaling.model;
 import webrtc.signaling.type.DeviceType;
 
 /**
- * 用户实体
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 用户实体
+ * @license Apache License 2.0
  */
 public class User {
 

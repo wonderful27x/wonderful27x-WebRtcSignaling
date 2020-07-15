@@ -1,7 +1,11 @@
 package webrtc.signaling.type;
 
 /**
- * 终端类型
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 终端类型
+ * @license Apache License 2.0
  */
 public enum DeviceType {
 

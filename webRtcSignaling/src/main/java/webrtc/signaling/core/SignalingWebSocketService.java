@@ -23,9 +23,13 @@ import webrtc.signaling.utils.IdCreator;
 import webrtc.signaling.utils.LogUtil;
 
 /**
- * 服务端信令交换webSocket
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 服务端信令交换webSocket-信令服务核心代码-完全面向对象
  * 我的理解是每一个webSocket连接成功后都会创建一个SignalingWebSocketService.this对象,
  * 在很多网上的教程中也是直接在容器中add(this)
+ * @license Apache License 2.0
  */
 @ServerEndpoint("/webRtcSignaling/{userId}/{deviceCode}")
 public class SignalingWebSocketService {
@@ -200,11 +204,10 @@ public class SignalingWebSocketService {
     //有人离开房间，通知房间里的所有人
     private void someoneLeave(){
         //组装信息，最关键的是消息类型和离开用户的id
-        BaseMessage<NegotiationMessage,Object> baseMessage = new BaseMessage<NegotiationMessage, Object>() {};
-        NegotiationMessage message = new NegotiationMessage();
-        message.userId = this.userId;
+        BaseMessage<User,Object> baseMessage = new BaseMessage<User, Object>() {};
+        User user = connectionManager.get(userId);
         baseMessage.setMessageType(MessageType.LEAVE);
-        baseMessage.setMessage(message);
+        baseMessage.setMessage(user);
         String jsonData = baseMessage.toJson();
 
         //获取需要发送的用户id

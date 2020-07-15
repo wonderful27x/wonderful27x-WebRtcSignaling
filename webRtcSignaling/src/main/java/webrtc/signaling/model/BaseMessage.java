@@ -8,7 +8,11 @@ import java.util.Map;
 import webrtc.signaling.type.MessageType;
 
 /**
- * 消息实体基类
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 消息实体基类，通过他可以方便的对json数据进行转换，他是完全面向对象的基础
+ * @license Apache License 2.0
  */
 public abstract class BaseMessage<T,E>{
 

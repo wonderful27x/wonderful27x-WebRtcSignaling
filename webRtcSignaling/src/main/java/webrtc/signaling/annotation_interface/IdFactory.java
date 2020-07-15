@@ -1,7 +1,11 @@
 package webrtc.signaling.annotation_interface;
 
 /**
- * id 工厂
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description id 工厂
+ * @license Apache License 2.0
  */
 public interface IdFactory {
 

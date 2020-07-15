@@ -5,7 +5,11 @@ import webrtc.signaling.model.Connection;
 import webrtc.signaling.model.User;
 
 /**
- * 连接管理类,实际管理的是连接的用户，而用户中保存了webSocket连接
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 连接管理类,实际管理的是连接的用户，而用户中保存了webSocket连接
+ * @license Apache License 2.0
  */
 public class ConnectionManager {
 

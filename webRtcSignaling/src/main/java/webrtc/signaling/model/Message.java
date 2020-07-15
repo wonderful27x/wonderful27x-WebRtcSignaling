@@ -7,7 +7,12 @@ import java.lang.reflect.Type;
 import webrtc.signaling.type.MessageType;
 
 /**
- * 消息实体
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 消息实体，通过他的一参构造函数能直接将一个json数据转换得到消息类型messageType，
+ * 而transForm方法能根据指定的泛型转换成具体的消息类型，这是核心方法
+ * @license Apache License 2.0
  */
 public class Message extends BaseMessage<String,String>{
 

@@ -1,7 +1,11 @@
 package webrtc.signaling.type;
 
 /**
- * 消息类型,右边的注释是站在客户端的角度来看的
+ * @author wonderful
+ * @date 2020-7-?
+ * @version 1.0
+ * @description 消息类型,右边的注释是站在客户端的角度来看的
+ * @license Apache License 2.0
  */
 public enum  MessageType {
 
