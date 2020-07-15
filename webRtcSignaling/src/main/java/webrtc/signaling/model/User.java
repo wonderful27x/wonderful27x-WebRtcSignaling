@@ -9,7 +9,7 @@ import webrtc.signaling.type.DeviceType;
  * @description 用户实体
  * @license Apache License 2.0
  */
-public class User {
+public class User implements Cloneable{
 
     private String userId;         //用户id
     private String userName;       //用户名
@@ -22,6 +22,21 @@ public class User {
     public User(String userId, String userName) {
         this.userId = userId;
         this.userName = userName;
+    }
+
+    @Override
+    public User clone() {
+        try {
+            User user = (User) super.clone();
+            user.userId = this.userId;
+            user.userName = this.userName;
+            user.roomId = this.roomId;
+            user.deviceType = this.deviceType;
+            user.connection = this.connection;
+        } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+        }
+        return new User();
     }
 
     public String getUserId() {

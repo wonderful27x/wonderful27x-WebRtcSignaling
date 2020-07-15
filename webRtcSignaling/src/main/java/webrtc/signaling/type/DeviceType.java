@@ -9,9 +9,9 @@ package webrtc.signaling.type;
  */
 public enum DeviceType {
 
-    COMPUTER(0,"NORMAL"),         //电脑
-    PHONE(1,"AUDIO_ONLY"),        //手机
-    DEFAULT(-1,"DEFAULT");        //默认值
+    COMPUTER(0,"COMPUTER"),         //电脑
+    PHONE(1,"PHONE"),               //手机
+    DEFAULT(-1,"DEFAULT");          //默认值
 
     private int code;
     private String type;

@@ -9,7 +9,7 @@ import javax.websocket.Session;
  * @description 与WebSocket的连接对象，Session具有会话功能
  * @license Apache License 2.0
  */
-public class Connection {
+public class Connection{
 
     private String createTime;//创建时间
     private Session session;  //会话session

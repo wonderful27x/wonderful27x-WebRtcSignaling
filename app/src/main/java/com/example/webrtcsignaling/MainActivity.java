@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import webrtc.signaling.model.BaseMessage;
 import webrtc.signaling.model.Message;
+import webrtc.signaling.model.User;
 import webrtc.signaling.type.MessageType;
 
 public class MainActivity extends AppCompatActivity {
@@ -17,10 +18,20 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.text).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                test2();
                 test();
             }
         });
 
+    }
+
+    private void test2(){
+        User user = new User();
+        user.setUserId("userId");
+        BaseMessage<User,Object> baseMessage = new BaseMessage<User, Object>() {};
+        baseMessage.setMessage(user);
+        String jsonData = baseMessage.toJson();
+        String end;
     }
 
     private void test(){

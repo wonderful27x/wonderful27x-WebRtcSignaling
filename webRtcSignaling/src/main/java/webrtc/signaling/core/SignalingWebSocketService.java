@@ -40,6 +40,7 @@ public class SignalingWebSocketService {
     private Gson gson;
 
     public SignalingWebSocketService(){
+        LogUtil.logPrint("webSocket 对象创建成功");
         roomManager = RoomManager.getInstance();
         connectionManager = ConnectionManager.getInstance();
         gson = new Gson();
@@ -53,6 +54,7 @@ public class SignalingWebSocketService {
      */
     @OnOpen
     public void onOpen(Session session, @PathParam("userId") String userId, @PathParam("deviceCode")int deviceCode){
+        LogUtil.logPrint("session code: " + session.hashCode() + " userId: " + userId + " deviceCode: " + DeviceType.getDeviceType(deviceCode).getType());
         createUserConnection(session,userId,deviceCode);
     }
 
@@ -114,13 +116,13 @@ public class SignalingWebSocketService {
 
         //连接成功后给客户端发送用户信息
         Event event = new Event();
-        event.objA = user;
-        event.objB = connection;
+        event.objA = user.clone();
         handleMessage(MessageType.CONNECT_OK,event);
     }
 
     //消息分发
     private void handleMessage(MessageType messageType,Event event){
+        LogUtil.logPrint("handleMessage-messageType: " + messageType.getType());
         switch (messageType){
             case CONNECT_OK:
                 connectOk(event);
@@ -250,8 +252,13 @@ public class SignalingWebSocketService {
 
     //连接成功后给客户端发送用户信息
     private void connectOk(Event event){
-        String jsonData = gson.toJson(event.objA);
-        Connection connection = (Connection) event.objB;
-        connection.sendMessage(jsonData);
+        LogUtil.logPrint("connectOk");
+        BaseMessage<User,Object> baseMessage = new BaseMessage<User, Object>() {};
+        User user = (User) event.objA;
+        //TODO 将connection设置为null，否则json转成出现死循环，但是不用担心user的数据被更改，因为传递过来的是一个克隆体
+        user.setConnection(null);
+        baseMessage.setMessage(user);
+        String jsonData = baseMessage.toJson();
+        connectionManager.getConnection(userId).sendMessage(jsonData);
     }
 }
