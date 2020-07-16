@@ -7,6 +7,11 @@ import android.widget.Button;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import webrtc.signaling.model.BaseMessage;
+import webrtc.signaling.model.NegotiationMessage;
+import webrtc.signaling.type.MessageType;
+import webrtc.signaling.type.RoomType;
+
 /**
  * @author wonderful
  * @date 2020-7-?
@@ -18,7 +23,9 @@ public class SignalingTestActivity extends AppCompatActivity {
 
     private Button signalingTest;
     private Button close;
+    private Button join;
     private SignalingWebSocketClient webSocketClient;
+    private String userId = "wonderful123456";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +33,7 @@ public class SignalingTestActivity extends AppCompatActivity {
         setContentView(R.layout.activity_signaling_test);
         signalingTest = findViewById(R.id.signalingTest);
         close = findViewById(R.id.close);
+        join = findViewById(R.id.join);
 
         signalingTest.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -33,17 +41,22 @@ public class SignalingTestActivity extends AppCompatActivity {
                 signalingTest();
             }
         });
-
         close.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 webSocketClient.close();
             }
         });
+        join.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                join();
+            }
+        });
     }
 
     private void signalingTest(){
-        String socketUri = "ws://172.16.164.82:8080/webRtcSignalingService/webRtcSignaling/0/1";
+        String socketUri = "ws://192.168.0.103:8080/webRtcSignalingService/webRtcSignaling/" + userId + "/1";
         URI uri = null;
         try {
             uri = new URI(socketUri);
@@ -52,5 +65,17 @@ public class SignalingTestActivity extends AppCompatActivity {
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
+    }
+
+    private void join(){
+        BaseMessage<NegotiationMessage,Object> baseMessage = new BaseMessage<NegotiationMessage, Object>() {};
+        NegotiationMessage message = new NegotiationMessage();
+        message.userId = userId;
+        message.roomType = RoomType.NORMAL;
+        message.roomId = "1234567";
+        baseMessage.setMessage(message);
+        baseMessage.setMessageType(MessageType.JOIN);
+        String jsonData = baseMessage.toJson();
+        webSocketClient.send(jsonData);
     }
 }

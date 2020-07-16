@@ -34,6 +34,7 @@ public class User implements Cloneable{
             user.roomId = this.roomId;
             user.deviceType = this.deviceType;
             user.connection = null;
+            return user;
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         }

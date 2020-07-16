@@ -3,7 +3,7 @@ apply plugin: 'java-library'
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'org.json:json:20180813'
+    implementation 'org.json:json:20200518'
     implementation files('libs/tomcat-websocket.jar')
     implementation files('libs/websocket-api.jar')
 }

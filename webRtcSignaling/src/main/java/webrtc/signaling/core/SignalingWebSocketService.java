@@ -260,6 +260,7 @@ public class SignalingWebSocketService {
         BaseMessage<User,Object> baseMessage = new BaseMessage<User, Object>() {};
         User user = (User) event.objA;
         baseMessage.setMessage(user);
+        baseMessage.setMessageType(MessageType.CONNECT_OK);
         String jsonData = baseMessage.toJson();
         connectionManager.getConnection(userId).sendMessage(jsonData);
     }
