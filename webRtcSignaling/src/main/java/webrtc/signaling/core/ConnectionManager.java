@@ -41,11 +41,15 @@ public class ConnectionManager {
     }
 
     public User get(String key){
-        return connections.get(key);
+        User user = connections.get(key);
+        if (user != null){
+            return user.clone();
+        }
+        return null;
     }
 
     public Connection getConnection(String userId){
-        return get(userId).getConnection();
+        return connections.get(userId).getConnection();
     }
 
     public void remove(String userId){

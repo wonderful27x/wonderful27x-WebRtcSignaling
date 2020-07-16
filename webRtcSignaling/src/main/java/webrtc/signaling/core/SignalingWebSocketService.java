@@ -116,7 +116,7 @@ public class SignalingWebSocketService {
 
         //连接成功后给客户端发送用户信息
         Event event = new Event();
-        event.objA = user.clone();
+        event.objA = connectionManager.get(userId);
         handleMessage(MessageType.CONNECT_OK,event);
     }
 
@@ -212,9 +212,13 @@ public class SignalingWebSocketService {
         baseMessage.setMessage(user);
         String jsonData = baseMessage.toJson();
 
-        //获取需要发送的用户id
+        //获取用户所在的房间的成员
         String roomId = connectionManager.get(userId).getRoomId();
+        //判空，用户可能并没有在房间里,key为null会造成崩溃
+        if (roomId == null)return;
         Room room = roomManager.get(roomId);
+        //二次判空
+        if (room == null)return;
         List<String> members = room.getMembers();
         //移除离开者
         members.remove(userId);
@@ -255,8 +259,6 @@ public class SignalingWebSocketService {
         LogUtil.logPrint("connectOk");
         BaseMessage<User,Object> baseMessage = new BaseMessage<User, Object>() {};
         User user = (User) event.objA;
-        //TODO 将connection设置为null，否则json转成出现死循环，但是不用担心user的数据被更改，因为传递过来的是一个克隆体
-        user.setConnection(null);
         baseMessage.setMessage(user);
         String jsonData = baseMessage.toJson();
         connectionManager.getConnection(userId).sendMessage(jsonData);

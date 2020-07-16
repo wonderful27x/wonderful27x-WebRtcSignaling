@@ -12,12 +12,6 @@
         android:id="@+id/messageTest"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="message 测试"/>
-
-    <Button
-        android:id="@+id/signalingTest"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="信令 测试"/>
+        android:text="点击测试"/>
 
 </LinearLayout>

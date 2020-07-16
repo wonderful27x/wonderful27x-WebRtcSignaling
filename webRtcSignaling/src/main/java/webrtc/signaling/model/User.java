@@ -24,6 +24,7 @@ public class User implements Cloneable{
         this.userName = userName;
     }
 
+    //TODO 在进行json转换时如果包含session会出现死循环，这里直接不给connection赋值
     @Override
     public User clone() {
         try {
@@ -32,7 +33,7 @@ public class User implements Cloneable{
             user.userName = this.userName;
             user.roomId = this.roomId;
             user.deviceType = this.deviceType;
-            user.connection = this.connection;
+            user.connection = null;
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         }
