@@ -41,7 +41,20 @@ public class ConnectionManager {
     }
 
     public User get(String key){
-        User user = connections.get(key);
+        return connections.get(key);
+    }
+
+    /***
+     * 从容器中克隆出一个User连接对象
+     * 这么设计主要有两个目的，一是为了数据安全，如果仅仅是为了获取连接用户的信息推荐调用这个方法，
+     * 这样在操作对象时不会改变当前存活的连接对象的数据，
+     * 二是为了解决json转换时出现的死循环问题，User的克隆将会忽略session，避免了json转换时session导致死循环问题
+     * 如果需要修改连接对象的数据或为了获取session请务必调用get方法
+     * @param userId 用户id
+     * @return 返回克隆体
+     */
+    public User cloneUser(String userId){
+        User user = connections.get(userId);
         if (user != null){
             return user.clone();
         }
@@ -49,13 +62,14 @@ public class ConnectionManager {
     }
 
     public Connection getConnection(String userId){
-        return connections.get(userId).getConnection();
+        return get(userId).getConnection();
     }
 
-    public void remove(String userId){
+    public User remove(String userId){
         User remove = connections.remove(userId);
         if (remove != null){
             remove.setConnection(null);
         }
+        return remove;
     }
 }

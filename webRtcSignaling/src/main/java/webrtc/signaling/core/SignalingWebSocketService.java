@@ -1,6 +1,10 @@
 package webrtc.signaling.core;
 
 import com.google.gson.Gson;
+
+import org.omg.PortableServer.LIFESPAN_POLICY_ID;
+
+import java.util.ArrayList;
 import java.util.List;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
@@ -64,6 +68,7 @@ public class SignalingWebSocketService {
      */
     @OnClose
     public void onClose(Session session){
+        LogUtil.logPrint("webSocket onClose");
         handleMessage(MessageType.LEAVE,null);
     }
 
@@ -74,6 +79,7 @@ public class SignalingWebSocketService {
      */
     @OnMessage
     public void onMessage(Session session,String message){
+        LogUtil.logPrint("onMessage: " + message);
         Message messageObject = new Message(message);
         Event event = new Event();
         event.objA = messageObject;
@@ -93,6 +99,7 @@ public class SignalingWebSocketService {
 
     //当有人建立了webSocket连接时，创建一个用户连接对象
     private void createUserConnection(Session session,String userId,int deviceCode){
+        LogUtil.logPrint("createUserConnection");
         //构建user信息
         userId = IdCreator.getInstance().createId(userId);
         DeviceType deviceType = DeviceType.getDeviceType(deviceCode);
@@ -116,7 +123,7 @@ public class SignalingWebSocketService {
 
         //连接成功后给客户端发送用户信息
         Event event = new Event();
-        event.objA = connectionManager.get(userId);
+        event.objA = connectionManager.cloneUser(userId);
         handleMessage(MessageType.CONNECT_OK,event);
     }
 
@@ -156,6 +163,7 @@ public class SignalingWebSocketService {
      * @param event 上层传递的事件消息
      */
     private void someoneJoin(Event event){
+        LogUtil.logPrint("someoneJoin");
         //从event中取出事件信息并转换成对象
         Message message = (Message) event.objA;
 
@@ -190,13 +198,15 @@ public class SignalingWebSocketService {
         baseMessage.setMessageType(MessageType.COME);
         baseMessage.setMessage(room);
         String jsonData = baseMessage.toJson();
+        LogUtil.logPrint("someoneJoin,send as COME: " + jsonData);
         connectionManager.getConnection(userId).sendMessage(jsonData);
 
         //给房间里的其他人发送加入者的信息，消息类型Join
         BaseMessage<User,Object> userMessage = new BaseMessage<User, Object>() {};
         userMessage.setMessageType(MessageType.JOIN);
-        userMessage.setMessage(connectionManager.get(userId));
+        userMessage.setMessage(connectionManager.cloneUser(userId));
         jsonData = userMessage.toJson();
+        LogUtil.logPrint("someoneJoin,send as JOIN: " + jsonData);
         for (String id:room.getMembers()){
             if (id.equals(userId))continue;
             connectionManager.getConnection(id).sendMessage(jsonData);
@@ -205,44 +215,66 @@ public class SignalingWebSocketService {
 
     //有人离开房间，通知房间里的所有人
     private void someoneLeave(){
+        LogUtil.logPrint("someoneLeave");
+        //先做清理工作再发送信息，因为清理工作更加重要，防止发送信息异常时造成清理无法执行
+        User remove = connectionManager.remove(userId);
+        /**如果移除失败后续操作很有可能造成致命的异常，如向一个已经关闭的session发送消息，这里仅仅打印一个警告，后续需要考虑如何处理*/
+        if (remove == null){
+            LogUtil.logPrint("warning: user " + userId + " has left but fail to remove from service!!!");
+            return;
+        }
+        //获取用户所在的房间的id
+        String roomId = remove.getRoomId();
+        //如果roomId为null说明用户没有加入任何房间
+        if (roomId == null){
+            LogUtil.logPrint("user " + userId + " who was not in any room has left");
+            return;
+        }
+        //获取房间
+        Room room = roomManager.get(roomId);
+        if (room == null){
+            LogUtil.logPrint("warning: user " + userId + " has left but fail to get his room message!!!");
+            return;
+        }
+        //获取房间成员
+        List<String> members = room.getMembers();
+        if (members == null){
+            LogUtil.logPrint("warning: user " + userId + " has left but fail to get his room members!!!");
+            return;
+        }
+
+        //从房间成员中移除离开用户
+        members.remove(userId);
+
         //组装信息，最关键的是消息类型和离开用户的id
         BaseMessage<User,Object> baseMessage = new BaseMessage<User, Object>() {};
-        User user = connectionManager.get(userId);
+        User user = connectionManager.cloneUser(userId);
         baseMessage.setMessageType(MessageType.LEAVE);
         baseMessage.setMessage(user);
         String jsonData = baseMessage.toJson();
+        LogUtil.logPrint("someoneLeave,leave message: " + jsonData);
 
-        //获取用户所在的房间的成员
-        String roomId = connectionManager.get(userId).getRoomId();
-        //判空，用户可能并没有在房间里,key为null会造成崩溃
-        if (roomId == null)return;
-        Room room = roomManager.get(roomId);
-        //二次判空
-        if (room == null)return;
-        List<String> members = room.getMembers();
-        //移除离开者
-        members.remove(userId);
         //发送消息
         for (String id:members){
             connectionManager.getConnection(id).sendMessage(jsonData);
         }
-
-        //清理空间
-        connectionManager.remove(userId);
     }
 
     //向一方发送自己的媒体协商数据-主动
     private void sendOffer(Event event){
+        LogUtil.logPrint("sendOffer");
         messageForward(event);
     }
 
     //向一方响应自己的媒体协商数据-被动
     private void answerOffer(Event event){
+        LogUtil.logPrint("answerOffer");
         messageForward(event);
     }
 
     //向一方发送自己的网络协商数据
     private void sendCandidate(Event event){
+        LogUtil.logPrint("sendCandidate");
         messageForward(event);
     }
 
@@ -263,5 +295,6 @@ public class SignalingWebSocketService {
         baseMessage.setMessageType(MessageType.CONNECT_OK);
         String jsonData = baseMessage.toJson();
         connectionManager.getConnection(userId).sendMessage(jsonData);
+        LogUtil.logPrint("connectOk,send message: " + jsonData);
     }
 }

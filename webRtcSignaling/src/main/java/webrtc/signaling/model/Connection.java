@@ -1,6 +1,7 @@
 package webrtc.signaling.model;
 
 import javax.websocket.Session;
+import webrtc.signaling.utils.LogUtil;
 
 /**
  * @author wonderful
@@ -32,6 +33,10 @@ public class Connection{
 
     //通过session发送信息
     public void sendMessage(String message){
-        session.getAsyncRemote().sendText(message);
+        if (session.isOpen()){
+            session.getAsyncRemote().sendText(message);
+        }else {
+            LogUtil.logPrint("error: try to send message with a closed session,hash code: " + session.hashCode() + " message: " + message);
+        }
     }
 }
