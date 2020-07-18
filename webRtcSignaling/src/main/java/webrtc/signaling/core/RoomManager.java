@@ -13,7 +13,7 @@ import webrtc.signaling.model.Room;
 public class RoomManager {
 
     private static RoomManager roomManager = null;
-    //聊天房间线程安全集合key:房间id value：房间对象
+    //聊天房间线程安全集合key:房间类型+房间id（type-id） value：房间对象
     private ConcurrentHashMap<String, Room> chatRooms;
 
     private RoomManager(){

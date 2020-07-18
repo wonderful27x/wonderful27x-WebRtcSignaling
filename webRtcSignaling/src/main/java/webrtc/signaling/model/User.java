@@ -13,7 +13,7 @@ public class User implements Cloneable{
 
     private String userId;         //用户id
     private String userName;       //用户名
-    private String roomId;         //用户所在房间号
+    private String roomKey;        //用户所在房间key
     private DeviceType deviceType; //使用的终端类型
     private Connection connection; //webSocket连接对象
 
@@ -31,7 +31,7 @@ public class User implements Cloneable{
             User user = (User) super.clone();
             user.userId = this.userId;
             user.userName = this.userName;
-            user.roomId = this.roomId;
+            user.roomKey = this.roomKey;
             user.deviceType = this.deviceType;
             user.connection = null;
             return user;
@@ -57,12 +57,12 @@ public class User implements Cloneable{
         this.userName = userName;
     }
 
-    public String getRoomId() {
-        return roomId;
+    public String getRoomKey() {
+        return roomKey;
     }
 
-    public void setRoomId(String roomId) {
-        this.roomId = roomId;
+    public void setRoomKey(String roomKey) {
+        this.roomKey = roomKey;
     }
 
     public DeviceType getDeviceType() {

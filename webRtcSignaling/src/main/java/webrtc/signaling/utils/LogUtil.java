@@ -1,5 +1,6 @@
 package webrtc.signaling.utils;
 
+import java.util.logging.Logger;
 import webrtc.signaling.model.Config;
 
 /**
@@ -7,9 +8,12 @@ import webrtc.signaling.model.Config;
  */
 public class LogUtil {
 
+    private static Logger log = Logger.getLogger("webRtc");
+
     public static void logPrint(String message){
         if (Config.LOG_ENABLE){
-            System.out.println(message);
+            //System.out.println(message);
+            log.info(message);
         }
     }
 }

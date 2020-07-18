@@ -1,10 +1,6 @@
 package webrtc.signaling.core;
 
 import com.google.gson.Gson;
-
-import org.omg.PortableServer.LIFESPAN_POLICY_ID;
-
-import java.util.ArrayList;
 import java.util.List;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
@@ -13,6 +9,8 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+
+import webrtc.signaling.annotation_interface.RoomKeyFactory;
 import webrtc.signaling.model.BaseMessage;
 import webrtc.signaling.model.Connection;
 import webrtc.signaling.model.Event;
@@ -30,13 +28,14 @@ import webrtc.signaling.utils.LogUtil;
  * @author wonderful
  * @date 2020-7-?
  * @version 1.0
- * @description 服务端信令交换webSocket-信令服务核心代码-完全面向对象
+ * @description 服务端信令交换webSocket-信令服务核心代码-完全面向对象，todo 对象的创建比较频繁，性能消耗较大，后期考虑优化-复用池
  * 我的理解是每一个webSocket连接成功后都会创建一个SignalingWebSocketService.this对象,
  * 在很多网上的教程中也是直接在容器中add(this)
+ * TODO 特别注意，这套信令服务和客户端有很多实体是一一对应的，务必保持一致性，否则会出现一些很难排查到的错误
  * @license Apache License 2.0
  */
 @ServerEndpoint("/webRtcSignaling/{userId}/{deviceCode}")
-public class SignalingWebSocketService {
+public class SignalingWebSocketService implements RoomKeyFactory {
 
     private RoomManager roomManager;              //房间管理者，里面包含了所有的房间
     private ConnectionManager connectionManager;  //连接管理者，里面包含了所有的连接用户
@@ -175,8 +174,11 @@ public class SignalingWebSocketService {
         String roomId = joinMessage.getMessage().roomId;      //获取申请加入的房间号
         RoomType roomType = joinMessage.getMessage().roomType;//获取申请加入的房间类型,只有在房间不存在创建的时候起作用
 
+        //合成房间钥匙
+        String roomKey = roomKeyBuild(roomType,roomId);
+
         //根据房间id从容器中取出房间信息
-        Room room = roomManager.get(roomId);
+        Room room = roomManager.get(roomKey);
 
         //如果房间不存在则创建一个房间
         if (room == null){
@@ -186,12 +188,12 @@ public class SignalingWebSocketService {
             String createTime = String.valueOf(System.currentTimeMillis());   //创建时间
             room.setCreateTime(createTime);                                   //创建时间
             room.setCreateUserId(userId);                                     //创建用户id
-            roomManager.put(roomId,room);                                     //向容器添加一个房间
+            roomManager.put(roomKey,room);                                    //向容器添加一个房间
         }
 
-        //将用户添加到房间里,并保存用户所在房间号
+        //将用户添加到房间里,并保存用户所在房间key
         room.addMemberId(userId);
-        connectionManager.get(userId).setRoomId(roomId);
+        connectionManager.get(userId).setRoomKey(roomKey);
 
         //给加入者发送房间信息，消息类型COME
         BaseMessage<Room,Object> baseMessage = new BaseMessage<Room, Object>() {};
@@ -224,14 +226,14 @@ public class SignalingWebSocketService {
             return;
         }
         //获取用户所在的房间的id
-        String roomId = remove.getRoomId();
+        String roomKey = remove.getRoomKey();
         //如果roomId为null说明用户没有加入任何房间
-        if (roomId == null){
+        if (roomKey == null){
             LogUtil.logPrint("user " + userId + " who was not in any room has left");
             return;
         }
         //获取房间
-        Room room = roomManager.get(roomId);
+        Room room = roomManager.get(roomKey);
         if (room == null){
             LogUtil.logPrint("warning: user " + userId + " has left but fail to get his room message!!!");
             return;
@@ -248,9 +250,8 @@ public class SignalingWebSocketService {
 
         //组装信息，最关键的是消息类型和离开用户的id
         BaseMessage<User,Object> baseMessage = new BaseMessage<User, Object>() {};
-        User user = connectionManager.cloneUser(userId);
         baseMessage.setMessageType(MessageType.LEAVE);
-        baseMessage.setMessage(user);
+        baseMessage.setMessage(remove);
         String jsonData = baseMessage.toJson();
         LogUtil.logPrint("someoneLeave,leave message: " + jsonData);
 
@@ -279,11 +280,18 @@ public class SignalingWebSocketService {
     }
 
     //转发消息
+    //注意从消息中取出的userId是目的id，即这条消息是要转发给这个用户的
+    //而对于消息的接收者来说，他需要知道这条消息是谁发来的，因此需要替换一下id
+    //而上述的信息交换方式并不是唯一的，完全可以让客户端发送一个目的id和自己的id
     private void messageForward(Event event){
         Message message = (Message) event.objA;
         BaseMessage<NegotiationMessage,Object> baseMessage = message.transForm(new BaseMessage<NegotiationMessage, Object>() {});
+        //通过这个id可以获取消息接收者的session会话
         String userId = baseMessage.getMessage().userId;
-        connectionManager.getConnection(userId).sendMessage((String) event.objB);
+        //将userId替换为自己的id，让接收者知道消息的发送者
+        baseMessage.getMessage().userId = this.userId;
+        //通过id取出session会话，将消息转发
+        connectionManager.getConnection(userId).sendMessage(baseMessage.toJson());
     }
 
     //连接成功后给客户端发送用户信息
@@ -296,5 +304,14 @@ public class SignalingWebSocketService {
         String jsonData = baseMessage.toJson();
         connectionManager.getConnection(userId).sendMessage(jsonData);
         LogUtil.logPrint("connectOk,send message: " + jsonData);
+    }
+
+    //合成房间钥匙
+    @Override
+    public String roomKeyBuild(RoomType roomType, String roomId) {
+        if (roomType == null || roomId == null){
+            throw new IllegalArgumentException("房间钥匙合成失败，房间类型或房间号为null！！！");
+        }
+        return roomType.getType() + "-" + roomId;
     }
 }

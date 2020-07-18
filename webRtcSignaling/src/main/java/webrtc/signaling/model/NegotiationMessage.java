@@ -10,8 +10,10 @@ import webrtc.signaling.type.RoomType;
  * @license Apache License 2.0
  */
 public class NegotiationMessage {
-    public String userId;    //user id
-    public String roomId;    //房间id
-    public RoomType roomType;//房间类型
-    public String sdp;       //媒体协商、网络协商数据
+    public String userId;     //user id
+    public String roomId;     //房间id
+    public RoomType roomType; //房间类型
+    public String sdpMid;     //?待研究
+    public int sdpMLineIndex; //?待研究
+    public String sdp;        //媒体协商、网络协商数据
 }
