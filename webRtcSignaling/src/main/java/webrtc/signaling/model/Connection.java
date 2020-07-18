@@ -1,5 +1,6 @@
 package webrtc.signaling.model;
 
+import java.io.IOException;
 import javax.websocket.Session;
 import webrtc.signaling.utils.LogUtil;
 
@@ -32,9 +33,18 @@ public class Connection{
     }
 
     //通过session发送信息
+    //TODO 这里使用getBasicRemote异步发送消息
+    //TODO 之前使用getAsyncRemote同步发送有时会出现问题，
+    //TODO 但是在网上看到一些说法，在高并发的情况下两种情况都有可能发生异常 （The remote endpoint was in state [TEXT_FULL_WRITING] which is an invalid state for called method）
+    //TODO 这里有待进一步测试和研究，感觉webSocket有点坑，直接封装socket可能更好些
     public void sendMessage(String message){
         if (session.isOpen()){
-            session.getAsyncRemote().sendText(message);
+            try {
+                session.getBasicRemote().sendText(message);
+            } catch (IOException e) {
+                e.printStackTrace();
+                LogUtil.logPrint("error when send message,session code: " + session.hashCode() + " error message: " + e.getMessage());
+            }
         }else {
             LogUtil.logPrint("error: try to send message with a closed session,hash code: " + session.hashCode() + " message: " + message);
         }
