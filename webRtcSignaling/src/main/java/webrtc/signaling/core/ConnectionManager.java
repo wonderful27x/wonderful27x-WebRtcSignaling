@@ -62,7 +62,11 @@ public class ConnectionManager {
     }
 
     public Connection getConnection(String userId){
-        return get(userId).getConnection();
+        User user = get(userId);
+        if (user != null){
+            return user.getConnection();
+        }
+        return null;
     }
 
     public User remove(String userId){

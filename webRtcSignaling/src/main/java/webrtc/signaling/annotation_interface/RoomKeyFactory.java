@@ -1,6 +1,6 @@
 package webrtc.signaling.annotation_interface;
 
-import webrtc.signaling.type.RoomType;
+import webrtc.signaling.model.Event;
 
 /**
  * @author wonderful
@@ -10,5 +10,5 @@ import webrtc.signaling.type.RoomType;
  * @license Apache License 2.0
  */
 public interface RoomKeyFactory {
-    public String roomKeyBuild(RoomType roomType,String roomId);
+    public String roomKeyBuild(Event event);
 }

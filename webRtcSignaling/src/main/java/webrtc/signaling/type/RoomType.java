@@ -9,10 +9,11 @@ package webrtc.signaling.type;
  */
 public enum RoomType {
 
-    NORMAL(0,"NORMAL"),                //普通房间，支持音视频
-    AUDIO_ONLY(1,"AUDIO_ONLY"),        //只支持音频
-    VIDEO_ONLY(2,"VIDEO_ONLY"),        //只支持视频
-    DEFAULT(-1,"DEFAULT");             //默认值
+    MEETING(0,"MEETING"),                //会议室、多人聊天
+    SINGLE(1,"SINGLE"),                  //一对一音视频聊天
+    SINGLE_AUDIO(2,"SINGLE_AUDIO"),      //一对一音频聊天
+    LIVE(3,"LIVE"),                      //直播
+    DEFAULT(-1,"DEFAULT");               //默认值
 
     private int code;
     private String type;

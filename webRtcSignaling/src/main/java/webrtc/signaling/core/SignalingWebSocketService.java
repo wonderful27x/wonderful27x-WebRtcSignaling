@@ -9,7 +9,7 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
-
+import webrtc.signaling.annotation_interface.PermissionCheck;
 import webrtc.signaling.annotation_interface.RoomKeyFactory;
 import webrtc.signaling.model.BaseMessage;
 import webrtc.signaling.model.Connection;
@@ -35,7 +35,7 @@ import webrtc.signaling.utils.LogUtil;
  * @license Apache License 2.0
  */
 @ServerEndpoint("/webRtcSignaling/{userId}/{deviceCode}")
-public class SignalingWebSocketService implements RoomKeyFactory {
+public class SignalingWebSocketService implements RoomKeyFactory, PermissionCheck {
 
     private RoomManager roomManager;              //房间管理者，里面包含了所有的房间
     private ConnectionManager connectionManager;  //连接管理者，里面包含了所有的连接用户
@@ -148,6 +148,12 @@ public class SignalingWebSocketService implements RoomKeyFactory {
             case CANDIDATE:
                 sendCandidate(event);
                 break;
+            case CUSTOM:
+                messageForward(event);
+                break;
+            case ROOM_FULL:
+                roomFull(event);
+                break;
         }
     }
 
@@ -160,6 +166,8 @@ public class SignalingWebSocketService implements RoomKeyFactory {
      * 对于客户端来说其中一和二是两种不同的消息类型，必须区分开来，将一设计成COME类型，二设计成JOIN类型
      * 但是请注意，对于服务端来说只要有人加入房间他收到的类型就只有一种JOIN
      * @param event 上层传递的事件消息
+     *
+     * TODO 线程安全需要再仔细考虑
      */
     private void someoneJoin(Event event){
         LogUtil.logPrint("someoneJoin");
@@ -175,21 +183,29 @@ public class SignalingWebSocketService implements RoomKeyFactory {
         RoomType roomType = joinMessage.getMessage().roomType;//获取申请加入的房间类型,只有在房间不存在创建的时候起作用
 
         //合成房间钥匙
-        String roomKey = roomKeyBuild(roomType,roomId);
+        Event buildEvent = new Event();
+        buildEvent.objA = roomType;
+        buildEvent.objB = roomId;
+        String roomKey = roomKeyBuild(buildEvent);
 
         //根据房间id从容器中取出房间信息
         Room room = roomManager.get(roomKey);
 
         //如果房间不存在则创建一个房间
         if (room == null){
-            room = new Room();
-            room.setRoomType(roomType);                                       //房间类型
+            room = Room.createRoom(roomType);                                 //创建房间
             room.setRoomId(roomId);                                           //房间号
             String createTime = String.valueOf(System.currentTimeMillis());   //创建时间
             room.setCreateTime(createTime);                                   //创建时间
             room.setCreateUserId(userId);                                     //创建用户id
             roomManager.put(roomKey,room);                                    //向容器添加一个房间
         }
+
+        //校验
+        Event checkEvent = new Event();
+        checkEvent.objA = room;
+        checkEvent.objB = userId;
+        if (!joinPermissionCheck(checkEvent))return;
 
         //将用户添加到房间里,并保存用户所在房间key
         room.addMemberId(userId);
@@ -201,7 +217,10 @@ public class SignalingWebSocketService implements RoomKeyFactory {
         baseMessage.setMessage(room);
         String jsonData = baseMessage.toJson();
         LogUtil.logPrint("someoneJoin,send as COME: " + jsonData);
-        connectionManager.getConnection(userId).sendMessage(jsonData);
+        Connection connection = connectionManager.getConnection(userId);
+        if (connection != null){
+            connection.sendMessage(jsonData);
+        }
 
         //给房间里的其他人发送加入者的信息，消息类型Join
         BaseMessage<User,Object> userMessage = new BaseMessage<User, Object>() {};
@@ -211,7 +230,10 @@ public class SignalingWebSocketService implements RoomKeyFactory {
         LogUtil.logPrint("someoneJoin,send as JOIN: " + jsonData);
         for (String id:room.getMembers()){
             if (id.equals(userId))continue;
-            connectionManager.getConnection(id).sendMessage(jsonData);
+            connection = connectionManager.getConnection(id);
+            if (connection != null){
+                connection.sendMessage(jsonData);
+            }
         }
     }
 
@@ -257,33 +279,48 @@ public class SignalingWebSocketService implements RoomKeyFactory {
 
         //发送消息
         for (String id:members){
-            connectionManager.getConnection(id).sendMessage(jsonData);
+            Connection connection = connectionManager.getConnection(id);
+            if (connection != null){
+                connection.sendMessage(jsonData);
+            }
         }
     }
 
     //向一方发送自己的媒体协商数据-主动
     private void sendOffer(Event event){
         LogUtil.logPrint("sendOffer");
-        messageForward(event);
+        messageTransport(event);
     }
 
     //向一方响应自己的媒体协商数据-被动
     private void answerOffer(Event event){
         LogUtil.logPrint("answerOffer");
-        messageForward(event);
+        messageTransport(event);
     }
 
     //向一方发送自己的网络协商数据
     private void sendCandidate(Event event){
         LogUtil.logPrint("sendCandidate");
-        messageForward(event);
+        messageTransport(event);
+    }
+
+    //消息转发，不作任何处理，注意他和messageForward的区别
+    private void messageForward(Event event){
+        Message message = (Message) event.objA;
+        //通过这个id可以获取消息接收者的session会话
+        String userId = message.getExtra();
+        //通过id取出session会话，将消息转发
+        Connection connection = connectionManager.getConnection(userId);
+        if (connection != null){
+            connection.sendMessage((String) event.objB);
+        }
     }
 
     //转发消息
     //注意从消息中取出的userId是目的id，即这条消息是要转发给这个用户的
     //而对于消息的接收者来说，他需要知道这条消息是谁发来的，因此需要替换一下id
     //而上述的信息交换方式并不是唯一的，完全可以让客户端发送一个目的id和自己的id
-    private void messageForward(Event event){
+    private void messageTransport(Event event){
         Message message = (Message) event.objA;
         BaseMessage<NegotiationMessage,Object> baseMessage = message.transForm(new BaseMessage<NegotiationMessage, Object>() {});
         //通过这个id可以获取消息接收者的session会话
@@ -291,7 +328,10 @@ public class SignalingWebSocketService implements RoomKeyFactory {
         //将userId替换为自己的id，让接收者知道消息的发送者
         baseMessage.getMessage().userId = this.userId;
         //通过id取出session会话，将消息转发
-        connectionManager.getConnection(userId).sendMessage(baseMessage.toJson());
+        Connection connection = connectionManager.getConnection(userId);
+        if (connection != null){
+            connection.sendMessage(baseMessage.toJson());
+        }
     }
 
     //连接成功后给客户端发送用户信息
@@ -302,16 +342,46 @@ public class SignalingWebSocketService implements RoomKeyFactory {
         baseMessage.setMessage(user);
         baseMessage.setMessageType(MessageType.CONNECT_OK);
         String jsonData = baseMessage.toJson();
-        connectionManager.getConnection(userId).sendMessage(jsonData);
+        Connection connection = connectionManager.getConnection(userId);
+        if (connection != null){
+            connection.sendMessage(jsonData);
+        }
         LogUtil.logPrint("connectOk,send message: " + jsonData);
+    }
+
+    //发送房间已满的消息
+    private void roomFull(Event event){
+        Room room = (Room) event.objA;
+        String userId = (String) event.objB;
+        BaseMessage<Room,Object> baseMessage = new BaseMessage<Room, Object>() {};
+        baseMessage.setMessageType(MessageType.ROOM_FULL);
+        baseMessage.setMessage(room);
+        String jsonData = baseMessage.toJson();
+        Connection connection = connectionManager.getConnection(userId);
+        if (connection != null){
+            connection.sendMessage(jsonData);
+        }
     }
 
     //合成房间钥匙
     @Override
-    public String roomKeyBuild(RoomType roomType, String roomId) {
+    public String roomKeyBuild(Event event) {
+        RoomType roomType = (RoomType) event.objA;
+        String roomId = (String) event.objB;
         if (roomType == null || roomId == null){
             throw new IllegalArgumentException("房间钥匙合成失败，房间类型或房间号为null！！！");
         }
         return roomType.getType() + "-" + roomId;
+    }
+
+    //加入房间前的校验，如果房间已满则发送房间已满的消息并返回false
+    @Override
+    public boolean joinPermissionCheck(Event event) {
+        Room room = (Room) event.objA;
+        if (room.leftSize() <=0){
+            handleMessage(MessageType.ROOM_FULL,event);
+            return false;
+        }
+        return true;
     }
 }

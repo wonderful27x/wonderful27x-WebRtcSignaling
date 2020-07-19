@@ -71,7 +71,7 @@ public class SignalingTestActivity extends AppCompatActivity {
         BaseMessage<NegotiationMessage,Object> baseMessage = new BaseMessage<NegotiationMessage, Object>() {};
         NegotiationMessage message = new NegotiationMessage();
         message.userId = userId;
-        message.roomType = RoomType.NORMAL;
+        message.roomType = RoomType.MEETING;
         message.roomId = "1234567";
         baseMessage.setMessage(message);
         baseMessage.setMessageType(MessageType.JOIN);

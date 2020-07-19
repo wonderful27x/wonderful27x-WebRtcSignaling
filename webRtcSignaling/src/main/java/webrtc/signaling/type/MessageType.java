@@ -25,6 +25,8 @@ public enum  MessageType {
 
     ROOM_FULL(20,"ROOM_FULL"),          //房间已满
 
+    CUSTOM(1001,"CUSTOM"),              //自定义消息类型，这样的消息服务器只做转发不做任何处理，为客户端信息交换扩展而设计
+
     DEFAULT(-1,"DEFAULT");              //默认值
 
     private int code;
